@@ -6,7 +6,7 @@ use dprint_plugin_golangci::handler::GolangciHandler;
 
 fn main() -> Result<()> {
     let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_time()
+        .enable_all()
         .build()
         .unwrap();
 

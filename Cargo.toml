@@ -3,10 +3,10 @@ name = "dprint-plugin-golangci"
 version = "0.1.0"
 authors = ["ageha734"]
 edition = "2024"
-description = "dprint process plugin for Go static analysis via golangci-lint"
+keywords = ["formatting", "formatter", "golangci-lint", "dprint", "go"]
 license = "MIT"
 repository = "https://github.com/ageha734/dprint-plugin-golangci"
-keywords = ["formatting", "formatter", "golangci-lint", "dprint", "go"]
+description = "dprint process plugin for Go static analysis via golangci-lint"
 
 [[bin]]
 name = "dprint-plugin-golangci"
@@ -22,10 +22,14 @@ panic = "abort"
 
 [dependencies]
 anyhow = "=1.0.98"
-dprint-core = { version = "=0.67.5", features = ["process"] }
+dprint-core = { version = "=0.67.4", features = ["process"] }
+reqwest = { version = "=0.12.15", features = ["json", "rustls-tls"], default-features = false }
 serde = { version = "=1.0.219", features = ["derive"] }
 serde_json = "=1.0.140"
-tokio = { version = "=1.45.1", features = ["rt", "time", "process", "io-util"] }
+tokio = { version = "=1.45.1", features = ["rt", "time", "process", "io-util", "fs"] }
+dirs = "=6.0.0"
+flate2 = "=1.1.2"
+tar = "=0.4.44"
 
 [dev-dependencies]
 dprint-development = "=0.10.1"

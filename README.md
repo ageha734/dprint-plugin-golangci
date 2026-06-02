@@ -32,10 +32,10 @@ Add to your `.dprint.json`:
 
 The `golangci` section in `.dprint.json` supports:
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `configPath` | string | (auto-detect) | Path to `.golangci.yml` |
-| `fix` | boolean | `true` | Auto-fix issues when possible |
+| Key          | Type    | Default       | Description                   |
+| ------------ | ------- | ------------- | ----------------------------- |
+| `configPath` | string  | (auto-detect) | Path to `.golangci.yml`       |
+| `fix`        | boolean | `true`        | Auto-fix issues when possible |
 
 Example:
 
@@ -94,6 +94,7 @@ src/
 ```
 
 Built on:
+
 - `dprint-core` (process feature) for the stdio message protocol
 - `tokio` for async subprocess management
 - `anyhow` for error handling

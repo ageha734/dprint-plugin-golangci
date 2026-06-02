@@ -1,17 +1,19 @@
-use anyhow::{Result, anyhow};
-use dprint_core::async_runtime::LocalBoxFuture;
+use anyhow::{anyhow, Result};
 use dprint_core::async_runtime::async_trait;
+use dprint_core::async_runtime::LocalBoxFuture;
 use dprint_core::configuration::ConfigKeyMap;
 use dprint_core::configuration::GlobalConfiguration;
 use dprint_core::plugins::{
     AsyncPluginHandler, FileMatchingInfo, FormatRequest, FormatResult, HostFormatRequest,
     PluginInfo, PluginResolveConfigurationResult,
 };
+use std::path::PathBuf;
 use std::process::Stdio;
-use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
-use crate::configuration::{Configuration, resolve_config};
+use crate::configuration::{resolve_config, Configuration};
+use crate::golangci;
+use crate::installer;
 
 pub struct GolangciHandler;
 
@@ -37,9 +39,9 @@ impl AsyncPluginHandler for GolangciHandler {
     async fn resolve_config(
         &self,
         config: ConfigKeyMap,
-        global_config: &GlobalConfiguration,
+        global_config: GlobalConfiguration,
     ) -> PluginResolveConfigurationResult<Configuration> {
-        let (resolved, diagnostics) = resolve_config(config, global_config);
+        let (resolved, diagnostics) = resolve_config(config, &global_config);
         PluginResolveConfigurationResult {
             config: resolved,
             diagnostics,
@@ -54,31 +56,40 @@ impl AsyncPluginHandler for GolangciHandler {
         &self,
         request: FormatRequest<Self::Configuration>,
         _format_with_host: impl FnMut(HostFormatRequest) -> LocalBoxFuture<'static, FormatResult>
-        + 'static,
+            + 'static,
     ) -> FormatResult {
         if request.range.is_some() {
             return Ok(None);
         }
 
-        format_text(&request.file_text, &request.file_path, &request.config).await
+        let file_text = String::from_utf8_lossy(&request.file_bytes);
+        format_bytes(&file_text, &request.file_path, &request.config).await
     }
 }
 
-pub async fn format_text(
+pub async fn format_bytes(
     file_text: &str,
     file_path: &std::path::Path,
     config: &Configuration,
-) -> Result<Option<String>> {
-    let file_path_str = file_path.to_string_lossy();
-    let args = config.to_args(&file_path_str);
+) -> Result<Option<Vec<u8>>> {
+    let binary_path = resolve_binary(config).await?;
+    let version = golangci::detect_version(&binary_path).await?;
 
-    let mut child = Command::new("golangci-lint")
+    let file_path_str = file_path.to_string_lossy();
+    let args = golangci::build_args(
+        version,
+        config.fix,
+        config.config_path.as_deref(),
+        &file_path_str,
+    );
+
+    let child = Command::new(&binary_path)
         .args(&args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| anyhow!("Failed to spawn golangci-lint: {}. Is it installed?", e))?;
+        .map_err(|e| anyhow!("Failed to spawn golangci-lint: {}", e))?;
 
     let output = child.wait_with_output().await?;
 
@@ -88,27 +99,31 @@ pub async fn format_text(
             if fixed_content == file_text {
                 return Ok(None);
             }
-            // restore original before returning the diff
             tokio::fs::write(file_path, file_text.as_bytes()).await?;
-            return Ok(Some(fixed_content));
+            return Ok(Some(fixed_content.into_bytes()));
         }
         return Ok(None);
     }
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
-    if stdout.trim().is_empty() && stderr.trim().is_empty() {
-        return Ok(None);
+    if let Some(issues) = golangci::parse_output(&stdout) {
+        let formatted = golangci::format_issues(&issues);
+        return Err(anyhow!("{}", formatted));
     }
 
-    Err(anyhow!(
-        "golangci-lint reported issues:\n{}{}",
-        stdout,
-        if stderr.is_empty() {
-            String::new()
-        } else {
-            format!("\nstderr: {}", stderr)
-        }
-    ))
+    if !stderr.trim().is_empty() {
+        return Err(anyhow!("golangci-lint error:\n{}", stderr));
+    }
+
+    Ok(None)
+}
+
+async fn resolve_binary(config: &Configuration) -> Result<PathBuf> {
+    let version = match &config.version {
+        Some(v) => v.clone(),
+        None => installer::resolve_latest_version().await?,
+    };
+    installer::ensure_golangci_lint(&version).await
 }

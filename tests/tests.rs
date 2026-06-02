@@ -1,42 +1,9 @@
-use dprint_development::{ParseSpecOptions, RunSpecsOptions, run_specs};
-use dprint_plugin_golangci::configuration::{Configuration, resolve_config};
-use dprint_plugin_golangci::handler::format_text;
-use std::path::PathBuf;
-
-#[tokio::test]
-async fn format_text_skips_non_go_file() {
-    let config = Configuration {
-        config_path: None,
-        fix: true,
-    };
-    let result = format_text("not go code", &PathBuf::from("test.txt"), &config).await;
-    // non-.go files are handled by file matching, but format_text itself works on any path
-    // golangci-lint will simply find no issues for non-Go content
-    assert!(result.is_ok() || result.is_err());
-}
-
-#[tokio::test]
-async fn format_text_returns_error_when_tool_missing() {
-    let config = Configuration {
-        config_path: None,
-        fix: true,
-    };
-    // Use a path that doesn't exist to trigger golangci-lint failure
-    let result = format_text(
-        "package main\n",
-        &PathBuf::from("/nonexistent/path/main.go"),
-        &config,
-    )
-    .await;
-
-    // Either tool not found or lint error is acceptable
-    assert!(result.is_ok() || result.is_err());
-}
+use dprint_core::configuration::{ConfigKeyMap, ConfigKeyValue, GlobalConfiguration};
+use dprint_plugin_golangci::configuration::resolve_config;
+use dprint_plugin_golangci::golangci::{self, Version};
 
 #[test]
-fn configuration_tests() {
-    use dprint_core::configuration::{ConfigKeyMap, GlobalConfiguration};
-
+fn configuration_resolve_defaults() {
     let config = ConfigKeyMap::new();
     let global = GlobalConfiguration::default();
     let (resolved, diagnostics) = resolve_config(config, &global);
@@ -44,18 +11,71 @@ fn configuration_tests() {
     assert!(diagnostics.is_empty());
     assert!(resolved.fix);
     assert!(resolved.config_path.is_none());
+    assert!(resolved.version.is_none());
 }
 
 #[test]
-fn args_generation() {
-    let config = Configuration {
-        config_path: Some(".golangci.yml".to_string()),
-        fix: true,
-    };
-    let args = config.to_args("main.go");
+fn configuration_resolve_with_version() {
+    let mut config = ConfigKeyMap::new();
+    config.insert(
+        "version".to_string(),
+        ConfigKeyValue::String("2.5.0".to_string()),
+    );
+    let global = GlobalConfiguration::default();
+    let (resolved, diagnostics) = resolve_config(config, &global);
 
-    assert!(args.contains(&"run".to_string()));
-    assert!(args.contains(&"--fix".to_string()));
-    assert!(args.contains(&"--config=.golangci.yml".to_string()));
-    assert!(args.contains(&"main.go".to_string()));
+    assert!(diagnostics.is_empty());
+    assert_eq!(resolved.version, Some("2.5.0".to_string()));
+}
+
+#[test]
+fn configuration_resolve_with_config_path() {
+    let mut config = ConfigKeyMap::new();
+    config.insert(
+        "configPath".to_string(),
+        ConfigKeyValue::String(".golangci.yml".to_string()),
+    );
+    let global = GlobalConfiguration::default();
+    let (resolved, diagnostics) = resolve_config(config, &global);
+
+    assert!(diagnostics.is_empty());
+    assert_eq!(resolved.config_path, Some(".golangci.yml".to_string()));
+}
+
+#[test]
+fn build_args_v1() {
+    let args = golangci::build_args(Version::V1, true, Some(".golangci.yml"), "main.go");
+    assert_eq!(
+        args,
+        vec!["run", "--fix", "--config=.golangci.yml", "--out-format=json", "main.go"]
+    );
+}
+
+#[test]
+fn build_args_v2() {
+    let args = golangci::build_args(Version::V2, true, Some(".golangci.yml"), "main.go");
+    assert_eq!(
+        args,
+        vec!["run", "--fix", "--config=.golangci.yml", "--output.json.path=stdout", "main.go"]
+    );
+}
+
+#[test]
+fn build_args_no_fix() {
+    let args = golangci::build_args(Version::V2, false, None, "src/lib.go");
+    assert_eq!(args, vec!["run", "--output.json.path=stdout", "src/lib.go"]);
+}
+
+#[test]
+fn parse_and_format_issues() {
+    let json = r#"{"Issues":[{"FromLinter":"unused","Text":"func `foo` is unused","Pos":{"Filename":"main.go","Offset":0,"Line":5,"Column":6}}]}"#;
+    let issues = golangci::parse_output(json).unwrap();
+    let output = golangci::format_issues(&issues);
+    assert_eq!(output, "main.go:5:6: [unused] func `foo` is unused");
+}
+
+#[test]
+fn parse_output_no_issues() {
+    let json = r#"{"Issues":[]}"#;
+    assert!(golangci::parse_output(json).is_none());
 }
