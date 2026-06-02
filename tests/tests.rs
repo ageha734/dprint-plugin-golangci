@@ -76,7 +76,10 @@ fn build_args_v2() {
 #[test]
 fn build_args_no_fix() {
     let args = golangci::build_args(Version::V2, false, None, "src/lib.go");
-    assert_eq!(args, vec!["run", "--output.json.path", "stdout", "src/lib.go"]);
+    assert_eq!(
+        args,
+        vec!["run", "--output.json.path", "stdout", "src/lib.go"]
+    );
 }
 
 #[test]
