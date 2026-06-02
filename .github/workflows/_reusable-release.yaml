@@ -39,9 +39,16 @@ jobs:
       - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ inputs.tag }}
+          draft: true
           files: |
             release/*.zip
             plugin.json
             deployment/schema.json
           prerelease: ${{ contains(inputs.tag, '-alpha.') }}
           generate_release_notes: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: gh release edit "$TAG" --draft=false
