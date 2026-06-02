@@ -100,6 +100,13 @@ pub async fn format_bytes(
         .map_err(|e| anyhow!("Failed to spawn golangci-lint: {}", e))?;
 
     let output = child.wait_with_output().await?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if let Some(issues) = golangci::parse_output(&stdout) {
+        let formatted = golangci::format_issues(&issues);
+        return Err(anyhow!("{}", formatted));
+    }
 
     if output.status.success() {
         if config.fix {
@@ -111,14 +118,6 @@ pub async fn format_bytes(
             return Ok(Some(fixed_content.into_bytes()));
         }
         return Ok(None);
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-
-    if let Some(issues) = golangci::parse_output(&stdout) {
-        let formatted = golangci::format_issues(&issues);
-        return Err(anyhow!("{}", formatted));
     }
 
     if !stderr.trim().is_empty() {
