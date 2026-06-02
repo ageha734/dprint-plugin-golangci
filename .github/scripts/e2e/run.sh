@@ -201,7 +201,7 @@ JSON
 {
   "golangci": {
     ${version_config}
-    "fix": true
+    "fix": false
   },
   "plugins": [
     "$test_dir/plugin.json@$plugin_checksum"
