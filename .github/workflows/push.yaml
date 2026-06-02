@@ -18,5 +18,6 @@ jobs:
   build:
     uses: ./.github/workflows/_reusable-cargo-build.yaml
   e2e:
-    needs: build
+    needs:
+      - build
     uses: ./.github/workflows/_reusable-e2e.yaml

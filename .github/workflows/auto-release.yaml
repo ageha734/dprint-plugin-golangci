@@ -1,0 +1,54 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: auto-release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  release-pr:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
+        with:
+          deno-version: v2.x
+
+      - name: Determine next version
+        id: version
+        run: deno run --allow-run --allow-env --allow-write .github/scripts/release/determine-version.ts
+
+      - name: Update Cargo.toml
+        if: steps.version.outputs.skip != 'true'
+        run: sed -i "s/^version = \".*\"/version = \"${{ steps.version.outputs.version }}\"/" Cargo.toml
+
+      - name: Update Cargo.lock
+        if: steps.version.outputs.skip != 'true'
+        run: cargo generate-lockfile
+
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        if: steps.version.outputs.skip != 'true'
+        with:
+          branch: release/${{ steps.version.outputs.tag }}
+          commit-message: "chore(release): ${{ steps.version.outputs.tag }}"
+          title: "release: ${{ steps.version.outputs.tag }}"
+          body: |
+            ## Release ${{ steps.version.outputs.tag }}
+
+            Merging this PR will create a pre-release.
+
+            Version: `${{ steps.version.outputs.version }}`
+          labels: release
