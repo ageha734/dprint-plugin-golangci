@@ -140,6 +140,7 @@ run_test() {
   setup_test_project "$test_dir" "$current_go"
   cd "$test_dir"
 
+  dprint clear-cache 2>/dev/null || true
   zip -j plugin-binary.zip "$BINARY_PATH"
   local zip_checksum
   zip_checksum=$(sha256 plugin-binary.zip | cut -d' ' -f1)
