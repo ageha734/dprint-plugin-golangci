@@ -1,5 +1,5 @@
-use dprint_development::{run_specs, ParseSpecOptions, RunSpecsOptions};
-use dprint_plugin_golangci::configuration::{resolve_config, Configuration};
+use dprint_development::{ParseSpecOptions, RunSpecsOptions, run_specs};
+use dprint_plugin_golangci::configuration::{Configuration, resolve_config};
 use dprint_plugin_golangci::handler::format_text;
 use std::path::PathBuf;
 

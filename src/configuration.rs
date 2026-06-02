@@ -1,6 +1,4 @@
-use dprint_core::configuration::{
-    ConfigKeyMap, ConfigurationDiagnostic, GlobalConfiguration,
-};
+use dprint_core::configuration::{ConfigKeyMap, ConfigurationDiagnostic, GlobalConfiguration};
 use serde::Serialize;
 
 #[derive(Clone, Serialize, Default)]
