@@ -82,6 +82,7 @@ check_go_compatibility() {
 setup_test_project() {
   local dir="$1"
   local go_version="$2"
+  local golangci_ver="$3"
   rm -rf "$dir"
   mkdir -p "$dir"
 
@@ -103,11 +104,21 @@ module e2e
 go ${go_version}
 MOD
 
-  cat > "$dir/.golangci.yml" <<'YAML'
+  local major="${golangci_ver%%.*}"
+  if [[ "$major" == "2" ]]; then
+    cat > "$dir/.golangci.yml" <<'YAML'
+version: "2"
 linters:
   enable:
     - unused
 YAML
+  else
+    cat > "$dir/.golangci.yml" <<'YAML'
+linters:
+  enable:
+    - unused
+YAML
+  fi
 }
 
 run_test() {
@@ -145,7 +156,7 @@ run_test() {
     return 0
   fi
 
-  setup_test_project "$test_dir" "$current_go"
+  setup_test_project "$test_dir" "$current_go" "$golangci_version"
   cd "$test_dir"
 
   dprint clear-cache 2>/dev/null || true
