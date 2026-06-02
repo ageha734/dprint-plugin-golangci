@@ -1,0 +1,65 @@
+name: Promote Release
+
+on:
+  release:
+    types:
+      - edited
+
+jobs:
+  promote:
+    if: >-
+      !github.event.release.prerelease &&
+      contains(github.event.release.tag_name, '-alpha.')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          ref: master
+
+      - name: Determine stable version
+        id: version
+        run: |
+          PRE_TAG="${{ github.event.release.tag_name }}"
+          STABLE_VERSION="${PRE_TAG#v}"
+          STABLE_VERSION="${STABLE_VERSION%%-*}"
+          echo "version=${STABLE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${STABLE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "pre_tag=${PRE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Promoting ${PRE_TAG} -> v${STABLE_VERSION}"
+
+      - name: Update Cargo.toml
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ steps.version.outputs.version }}\"/" Cargo.toml
+          cargo generate-lockfile 2>/dev/null || true
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock
+          git commit -m "chore(release): ${{ steps.version.outputs.tag }}"
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin master --tags
+
+      - name: Copy assets from pre-release to stable release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release-assets
+          gh release download "${{ steps.version.outputs.pre_tag }}" -D release-assets
+
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --generate-notes \
+            --latest \
+            release-assets/*
+
+      - name: Delete pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "${{ steps.version.outputs.pre_tag }}" --yes
+          git push origin --delete "${{ steps.version.outputs.pre_tag }}" || true
