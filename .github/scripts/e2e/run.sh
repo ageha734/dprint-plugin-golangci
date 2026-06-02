@@ -102,6 +102,12 @@ module e2e
 
 go ${go_version}
 MOD
+
+  cat > "$dir/.golangci.yml" <<'YAML'
+linters:
+  enable:
+    - unused
+YAML
 }
 
 run_test() {

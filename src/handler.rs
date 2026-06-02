@@ -75,16 +75,24 @@ pub async fn format_bytes(
     let binary_path = resolve_binary(config).await?;
     let version = golangci::detect_version(&binary_path).await?;
 
-    let file_path_str = file_path.to_string_lossy();
+    let file_name = file_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| file_path.to_string_lossy().to_string());
     let args = golangci::build_args(
         version,
         config.fix,
         config.config_path.as_deref(),
-        &file_path_str,
+        &file_name,
     );
+
+    let work_dir = file_path
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
 
     let child = Command::new(&binary_path)
         .args(&args)
+        .current_dir(work_dir)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
