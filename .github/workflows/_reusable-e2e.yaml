@@ -56,4 +56,4 @@ jobs:
       - name: Run E2E
         run: |
           chmod +x .github/scripts/e2e/run.sh
-          .github/scripts/e2e/run.sh "${{ github.workspace }}/target/release/dprint-plugin-golangci"
+          .github/scripts/e2e/run.sh "${{ github.workspace }}/target/release/dprint-plugin-golangci" "${{ matrix.mode }}" "${{ matrix.golangci }}"
