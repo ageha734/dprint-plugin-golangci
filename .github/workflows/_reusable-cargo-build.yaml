@@ -37,7 +37,7 @@ jobs:
 
       - id: toolchain
         shell: bash
-        run: echo "channel=$(grep '^channel' rust-toolchain.toml | cut -d'\"' -f2)" >> "$GITHUB_OUTPUT"
+        run: echo "channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
 
       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
