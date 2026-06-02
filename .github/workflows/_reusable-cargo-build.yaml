@@ -50,37 +50,8 @@ jobs:
         if: matrix.target != 'aarch64-unknown-linux-gnu'
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Upload binary (Linux x86_64)
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+      - name: Upload binary (${{ matrix.target }})
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dprint-plugin-golangci-linux-x86_64
-          path: target/x86_64-unknown-linux-gnu/release/dprint-plugin-golangci
-
-      - name: Upload binary (Linux aarch64)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: dprint-plugin-golangci-linux-aarch64
-          path: target/aarch64-unknown-linux-gnu/release/dprint-plugin-golangci
-
-      - name: Upload binary (Windows x86_64)
-        if: matrix.target == 'x86_64-pc-windows-msvc'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: dprint-plugin-golangci-windows-x86_64
-          path: target/x86_64-pc-windows-msvc/release/dprint-plugin-golangci.exe
-
-      - name: Upload binary (Darwin x86_64)
-        if: matrix.target == 'x86_64-apple-darwin'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: dprint-plugin-golangci-darwin-x86_64
-          path: target/x86_64-apple-darwin/release/dprint-plugin-golangci
-
-      - name: Upload binary (Darwin aarch64)
-        if: matrix.target == 'aarch64-apple-darwin'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: dprint-plugin-golangci-darwin-aarch64
-          path: target/aarch64-apple-darwin/release/dprint-plugin-golangci
+          name: dprint-plugin-golangci-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/dprint-plugin-golangci
