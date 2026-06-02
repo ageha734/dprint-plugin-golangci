@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
-use dprint_core::async_runtime::async_trait;
+use anyhow::{Result, anyhow};
 use dprint_core::async_runtime::LocalBoxFuture;
+use dprint_core::async_runtime::async_trait;
 use dprint_core::configuration::ConfigKeyMap;
 use dprint_core::configuration::GlobalConfiguration;
 use dprint_core::plugins::{
@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::process::Command;
 
-use crate::configuration::{resolve_config, Configuration};
+use crate::configuration::{Configuration, resolve_config};
 use crate::golangci;
 use crate::installer;
 
@@ -56,7 +56,7 @@ impl AsyncPluginHandler for GolangciHandler {
         &self,
         request: FormatRequest<Self::Configuration>,
         _format_with_host: impl FnMut(HostFormatRequest) -> LocalBoxFuture<'static, FormatResult>
-            + 'static,
+        + 'static,
     ) -> FormatResult {
         if request.range.is_some() {
             return Ok(None);

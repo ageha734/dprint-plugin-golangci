@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 
 const GITHUB_REPO: &str = "golangci/golangci-lint";
@@ -28,7 +28,10 @@ pub async fn ensure_golangci_lint(version: &str) -> Result<PathBuf> {
 }
 
 pub async fn resolve_latest_version() -> Result<String> {
-    let url = format!("https://api.github.com/repos/{}/releases/latest", GITHUB_REPO);
+    let url = format!(
+        "https://api.github.com/repos/{}/releases/latest",
+        GITHUB_REPO
+    );
     let client = reqwest::Client::new();
     let resp = client
         .get(&url)
@@ -69,8 +72,7 @@ fn which(binary: &str) -> Option<PathBuf> {
 }
 
 fn cache_directory() -> Result<PathBuf> {
-    let base = dirs::cache_dir()
-        .ok_or_else(|| anyhow!("Could not determine cache directory"))?;
+    let base = dirs::cache_dir().ok_or_else(|| anyhow!("Could not determine cache directory"))?;
     let dir = base.join("dprint-plugin-golangci");
     std::fs::create_dir_all(&dir)?;
     Ok(dir)

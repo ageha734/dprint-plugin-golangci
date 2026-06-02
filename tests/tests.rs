@@ -47,7 +47,13 @@ fn build_args_v1() {
     let args = golangci::build_args(Version::V1, true, Some(".golangci.yml"), "main.go");
     assert_eq!(
         args,
-        vec!["run", "--fix", "--config=.golangci.yml", "--out-format=json", "main.go"]
+        vec![
+            "run",
+            "--fix",
+            "--config=.golangci.yml",
+            "--out-format=json",
+            "main.go"
+        ]
     );
 }
 
@@ -56,7 +62,13 @@ fn build_args_v2() {
     let args = golangci::build_args(Version::V2, true, Some(".golangci.yml"), "main.go");
     assert_eq!(
         args,
-        vec!["run", "--fix", "--config=.golangci.yml", "--output.json.path=stdout", "main.go"]
+        vec![
+            "run",
+            "--fix",
+            "--config=.golangci.yml",
+            "--output.json.path=stdout",
+            "main.go"
+        ]
     );
 }
 

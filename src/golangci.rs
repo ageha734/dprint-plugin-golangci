@@ -66,7 +66,12 @@ pub enum Version {
     V2,
 }
 
-pub fn build_args(version: Version, fix: bool, config_path: Option<&str>, file_path: &str) -> Vec<String> {
+pub fn build_args(
+    version: Version,
+    fix: bool,
+    config_path: Option<&str>,
+    file_path: &str,
+) -> Vec<String> {
     let mut args = vec!["run".to_string()];
 
     if fix {
@@ -104,7 +109,10 @@ mod tests {
     #[test]
     fn build_args_v2_default() {
         let args = build_args(Version::V2, true, None, "main.go");
-        assert_eq!(args, vec!["run", "--fix", "--output.json.path=stdout", "main.go"]);
+        assert_eq!(
+            args,
+            vec!["run", "--fix", "--output.json.path=stdout", "main.go"]
+        );
     }
 
     #[test]
@@ -112,7 +120,12 @@ mod tests {
         let args = build_args(Version::V2, false, Some(".golangci.yml"), "pkg/foo.go");
         assert_eq!(
             args,
-            vec!["run", "--config=.golangci.yml", "--output.json.path=stdout", "pkg/foo.go"]
+            vec![
+                "run",
+                "--config=.golangci.yml",
+                "--output.json.path=stdout",
+                "pkg/foo.go"
+            ]
         );
     }
 
