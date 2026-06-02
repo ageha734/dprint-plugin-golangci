@@ -189,6 +189,16 @@ JSON
 }
 JSON
 
+  echo "--- dprint.json ---"
+  cat dprint.json
+  echo "--- plugin.json ---"
+  cat plugin.json
+  echo "--- go version ---"
+  go version
+  echo "--- golangci-lint version ---"
+  golangci-lint version 2>&1 || echo "(not in PATH)"
+  echo "--- running dprint check ---"
+
   local output
   output=$(dprint check 2>&1 || true)
   echo "$output"
