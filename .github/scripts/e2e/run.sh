@@ -209,36 +209,6 @@ JSON
 }
 JSON
 
-  echo "--- dprint.json ---"
-  cat dprint.json
-  echo "--- plugin.json ---"
-  cat plugin.json
-  echo "--- go version ---"
-  go version
-  echo "--- golangci-lint version ---"
-  command -v golangci-lint &>/dev/null && golangci-lint version 2>&1 || echo "(not in PATH)"
-  echo "--- files in test dir ---"
-  ls -la
-  echo "--- direct golangci-lint run (debug) ---"
-  local lint_bin
-  lint_bin=$(command -v golangci-lint 2>/dev/null || echo "")
-  if [[ -z "$lint_bin" && -n "$dprint_config_version" ]]; then
-    lint_bin="$HOME/.cache/dprint-plugin-golangci/v${dprint_config_version}/golangci-lint"
-  fi
-  if [[ -n "$lint_bin" && -x "$lint_bin" ]]; then
-    echo "  binary: $lint_bin"
-    echo "  stdout:"
-    "$lint_bin" run --output.json.path stdout main.go 2>/tmp/lint-stderr || true
-    echo "  stderr:"
-    cat /tmp/lint-stderr || true
-    echo "  ---"
-    echo "  v1 format stdout:"
-    "$lint_bin" run --out-format=json main.go 2>/tmp/lint-stderr2 || true
-    echo "  v1 format stderr:"
-    cat /tmp/lint-stderr2 || true
-  fi
-  echo "--- running dprint check ---"
-
   local output
   output=$(dprint check -- main.go 2>&1 || true)
   echo "$output"
