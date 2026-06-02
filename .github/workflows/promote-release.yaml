@@ -14,11 +14,6 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          fetch-depth: 0
-          ref: master
-
       - name: Determine stable version
         id: version
         run: |
@@ -30,36 +25,60 @@ jobs:
           echo "pre_tag=${PRE_TAG}" >> "$GITHUB_OUTPUT"
           echo "Promoting ${PRE_TAG} -> v${STABLE_VERSION}"
 
-      - name: Update Cargo.toml
-        run: |
-          sed -i "s/^version = \".*\"/version = \"${{ steps.version.outputs.version }}\"/" Cargo.toml
-          cargo generate-lockfile 2>/dev/null || true
+      - name: Create stable tag
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const preTag = '${{ steps.version.outputs.pre_tag }}';
+            const stableTag = '${{ steps.version.outputs.tag }}';
+            const { data: ref } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `tags/${preTag}`,
+            });
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${stableTag}`,
+              sha: ref.object.sha,
+            });
+            console.log(`Created tag ${stableTag} at ${ref.object.sha}`);
 
-      - name: Commit and tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Cargo.toml Cargo.lock
-          git commit -m "chore(release): ${{ steps.version.outputs.tag }}"
-          git tag "${{ steps.version.outputs.tag }}"
-          git push origin master --tags
+      - run: mkdir -p release-assets
 
-      - name: Copy assets from pre-release to stable release
+      - name: Download pre-release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p release-assets
-          gh release download "${{ steps.version.outputs.pre_tag }}" -D release-assets
+        run: gh release download "${{ steps.version.outputs.pre_tag }}" -D release-assets
 
-          gh release create "${{ steps.version.outputs.tag }}" \
-            --title "${{ steps.version.outputs.tag }}" \
-            --generate-notes \
-            --latest \
-            release-assets/*
+      - name: Create stable release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh release create "${{ steps.version.outputs.tag }}"
+          --title "${{ steps.version.outputs.tag }}"
+          --generate-notes
+          --latest
+          release-assets/*
 
       - name: Delete pre-release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release delete "${{ steps.version.outputs.pre_tag }}" --yes
-          git push origin --delete "${{ steps.version.outputs.pre_tag }}" || true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const preTag = '${{ steps.version.outputs.pre_tag }}';
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: preTag,
+            });
+            await github.rest.repos.deleteRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+            });
+            await github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `tags/${preTag}`,
+            });
+            console.log(`Deleted pre-release ${preTag}`);
