@@ -37,6 +37,8 @@ jobs:
 
   build:
     needs: tag
+    permissions:
+      contents: read
     uses: ./.github/workflows/_reusable-cargo-build.yaml
     with:
       ref: ${{ needs.tag.outputs.tag }}
@@ -45,6 +47,8 @@ jobs:
     needs:
       - tag
       - build
+    permissions:
+      contents: read
     uses: ./.github/workflows/_reusable-release.yaml
     with:
       tag: ${{ needs.tag.outputs.tag }}
