@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 jobs:
   build:
@@ -27,8 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@56f84321dbcf09f3e5c1e92dd0d0b87f0a1b0adb # stable
         with:
+          toolchain: "1.87.0"
           targets: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
@@ -38,27 +40,27 @@ jobs:
         run: cargo install cross --locked
 
       - name: Build
+        shell: bash
         run: |
           if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
             cross build --release --target ${{ matrix.target }}
           else
             cargo build --release --target ${{ matrix.target }}
           fi
-        shell: bash
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
+        shell: bash
         run: |
           cd target/${{ matrix.target }}/release
           zip ../../../dprint-plugin-golangci-${{ matrix.target }}.zip dprint-plugin-golangci
-        shell: bash
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           cd target/${{ matrix.target }}/release
           Compress-Archive -Path dprint-plugin-golangci.exe -DestinationPath ../../../dprint-plugin-golangci-${{ matrix.target }}.zip
-        shell: pwsh
 
       - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
@@ -87,11 +89,12 @@ jobs:
           find artifacts -name "*.zip" -exec cp {} release/ \;
 
       - name: Generate plugin.json
-        run: deno run --allow-read --allow-write .github/scripts/create-plugin-json.ts
+        run: deno run --allow-read --allow-write .github/scripts/release/create-plugin-json.ts
 
       - uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:
           files: |
             release/*.zip
             plugin.json
+            deployment/schema.json
           generate_release_notes: true

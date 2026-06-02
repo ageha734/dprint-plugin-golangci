@@ -4,7 +4,7 @@ on:
   push:
     branches: ["master"]
   pull_request:
-    branches: ["master"]
+  workflow_dispatch:
 
 jobs:
   check:
@@ -12,8 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@56f84321dbcf09f3e5c1e92dd0b0b87f0a1b0adb # stable
         with:
+          toolchain: "1.87.0"
           components: rustfmt, clippy
 
       - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
