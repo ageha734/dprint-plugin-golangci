@@ -84,7 +84,10 @@ pub fn build_args(
 
     match version {
         Version::V1 => args.push("--out-format=json".to_string()),
-        Version::V2 => args.push("--output.json.path=stdout".to_string()),
+        Version::V2 => {
+            args.push("--output.json.path".to_string());
+            args.push("stdout".to_string());
+        }
     }
 
     args.push(file_path.to_string());
@@ -111,7 +114,7 @@ mod tests {
         let args = build_args(Version::V2, true, None, "main.go");
         assert_eq!(
             args,
-            vec!["run", "--fix", "--output.json.path=stdout", "main.go"]
+            vec!["run", "--fix", "--output.json.path", "stdout", "main.go"]
         );
     }
 
@@ -123,7 +126,8 @@ mod tests {
             vec![
                 "run",
                 "--config=.golangci.yml",
-                "--output.json.path=stdout",
+                "--output.json.path",
+                "stdout",
                 "pkg/foo.go"
             ]
         );

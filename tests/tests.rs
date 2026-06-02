@@ -66,7 +66,8 @@ fn build_args_v2() {
             "run",
             "--fix",
             "--config=.golangci.yml",
-            "--output.json.path=stdout",
+            "--output.json.path",
+            "stdout",
             "main.go"
         ]
     );
@@ -75,7 +76,7 @@ fn build_args_v2() {
 #[test]
 fn build_args_no_fix() {
     let args = golangci::build_args(Version::V2, false, None, "src/lib.go");
-    assert_eq!(args, vec!["run", "--output.json.path=stdout", "src/lib.go"]);
+    assert_eq!(args, vec!["run", "--output.json.path", "stdout", "src/lib.go"]);
 }
 
 #[test]

@@ -197,10 +197,12 @@ JSON
   go version
   echo "--- golangci-lint version ---"
   golangci-lint version 2>&1 || echo "(not in PATH)"
+  echo "--- files in test dir ---"
+  ls -la
   echo "--- running dprint check ---"
 
   local output
-  output=$(dprint check 2>&1 || true)
+  output=$(dprint check -- main.go 2>&1 || true)
   echo "$output"
 
   if echo "$output" | grep -q "unused"; then
