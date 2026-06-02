@@ -95,7 +95,8 @@ pub fn build_args(
 }
 
 pub fn parse_output(stdout: &str) -> Option<Vec<LintIssue>> {
-    let output: LintOutput = serde_json::from_str(stdout).ok()?;
+    let json_str = stdout.lines().next().unwrap_or(stdout);
+    let output: LintOutput = serde_json::from_str(json_str).ok()?;
     output.issues.filter(|issues| !issues.is_empty())
 }
 

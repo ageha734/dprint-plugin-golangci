@@ -2,6 +2,8 @@
 set -euo pipefail
 
 BINARY_PATH="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+MODE="${2:-}"          # "installed" or "auto-install"
+VERSION="${3:-}"       # golangci-lint version (required for auto-install)
 E2E_DIR="/tmp/e2e-dprint-golangci"
 
 sha256() { sha256sum "$1" 2>/dev/null || shasum -a 256 "$1"; }
@@ -80,6 +82,7 @@ check_go_compatibility() {
 setup_test_project() {
   local dir="$1"
   local go_version="$2"
+  local golangci_ver="$3"
   rm -rf "$dir"
   mkdir -p "$dir"
 
@@ -100,6 +103,22 @@ module e2e
 
 go ${go_version}
 MOD
+
+  local major="${golangci_ver%%.*}"
+  if [[ "$major" == "2" ]]; then
+    cat > "$dir/.golangci.yml" <<'YAML'
+version: "2"
+linters:
+  enable:
+    - unused
+YAML
+  else
+    cat > "$dir/.golangci.yml" <<'YAML'
+linters:
+  enable:
+    - unused
+YAML
+  fi
 }
 
 run_test() {
@@ -137,7 +156,7 @@ run_test() {
     return 0
   fi
 
-  setup_test_project "$test_dir" "$current_go"
+  setup_test_project "$test_dir" "$current_go" "$golangci_version"
   cd "$test_dir"
 
   dprint clear-cache 2>/dev/null || true
@@ -182,25 +201,13 @@ JSON
 {
   "golangci": {
     ${version_config}
-    "fix": true
+    "fix": false
   },
   "plugins": [
     "$test_dir/plugin.json@$plugin_checksum"
   ]
 }
 JSON
-
-  echo "--- dprint.json ---"
-  cat dprint.json
-  echo "--- plugin.json ---"
-  cat plugin.json
-  echo "--- go version ---"
-  go version
-  echo "--- golangci-lint version ---"
-  golangci-lint version 2>&1 || echo "(not in PATH)"
-  echo "--- files in test dir ---"
-  ls -la
-  echo "--- running dprint check ---"
 
   local output
   output=$(dprint check -- main.go 2>&1 || true)
@@ -217,34 +224,28 @@ JSON
 
 # --- Main ---
 
+if [[ -z "$MODE" ]]; then
+  echo "Usage: $0 <binary> <mode> [version]"
+  echo "  mode: 'installed' or 'auto-install'"
+  echo "  version: golangci-lint version (required for auto-install)"
+  exit 1
+fi
+
+if [[ "$MODE" == "auto-install" && -z "$VERSION" ]]; then
+  echo "Error: version is required for auto-install mode"
+  exit 1
+fi
+
 echo "Environment:"
 echo "  Go: $(detect_go_version || echo 'not found')"
 echo "  golangci-lint: $(detect_golangci_version || echo 'not found')"
 echo "  dprint: $(dprint --version 2>/dev/null || echo 'not found')"
+echo "  Mode: $MODE"
+echo "  Version: ${VERSION:-auto-detect}"
 echo
 
-FAILED=0
-
-# Test 1: Use installed golangci-lint (if available)
-if ! run_test "installed"; then
-  FAILED=1
-fi
-echo
-
-# Test 2: Auto-install specific versions
-AUTO_INSTALL_VERSIONS=("2.5.0" "2.4.0" "1.64.8")
-
-for v in "${AUTO_INSTALL_VERSIONS[@]}"; do
-  if ! run_test "auto-install:$v"; then
-    FAILED=1
-  fi
-  echo
-done
-
-if [ "$FAILED" -eq 0 ]; then
-  echo "=== All E2E tests passed ==="
-  exit 0
+if [[ "$MODE" == "installed" ]]; then
+  run_test "installed"
 else
-  echo "=== Some E2E tests failed ==="
-  exit 1
+  run_test "auto-install:$VERSION"
 fi
