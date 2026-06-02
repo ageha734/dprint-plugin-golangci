@@ -5,6 +5,12 @@ on:
     types:
       - edited
 
+concurrency:
+  group: promote-release
+  cancel-in-progress: false
+
+permissions: {}
+
 jobs:
   promote:
     if: >-
@@ -16,8 +22,10 @@ jobs:
     steps:
       - name: Determine stable version
         id: version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          PRE_TAG="${{ github.event.release.tag_name }}"
+          PRE_TAG="$RELEASE_TAG"
           STABLE_VERSION="${PRE_TAG#v}"
           STABLE_VERSION="${STABLE_VERSION%%-*}"
           echo "version=${STABLE_VERSION}" >> "$GITHUB_OUTPUT"
@@ -27,10 +35,13 @@ jobs:
 
       - name: Create stable tag
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PRE_TAG: ${{ steps.version.outputs.pre_tag }}
+          STABLE_TAG: ${{ steps.version.outputs.tag }}
         with:
           script: |
-            const preTag = '${{ steps.version.outputs.pre_tag }}';
-            const stableTag = '${{ steps.version.outputs.tag }}';
+            const preTag = process.env.PRE_TAG;
+            const stableTag = process.env.STABLE_TAG;
             const { data: ref } = await github.rest.git.getRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -49,23 +60,27 @@ jobs:
       - name: Download pre-release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release download "${{ steps.version.outputs.pre_tag }}" -D release-assets
+          PRE_TAG: ${{ steps.version.outputs.pre_tag }}
+        run: gh release download "$PRE_TAG" -D release-assets
 
       - name: Create stable release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STABLE_TAG: ${{ steps.version.outputs.tag }}
         run: >-
-          gh release create "${{ steps.version.outputs.tag }}"
-          --title "${{ steps.version.outputs.tag }}"
+          gh release create "$STABLE_TAG"
+          --title "$STABLE_TAG"
           --generate-notes
           --latest
           release-assets/*
 
       - name: Delete pre-release
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PRE_TAG: ${{ steps.version.outputs.pre_tag }}
         with:
           script: |
-            const preTag = '${{ steps.version.outputs.pre_tag }}';
+            const preTag = process.env.PRE_TAG;
             const release = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,

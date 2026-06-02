@@ -31,9 +31,10 @@ jobs:
             os: windows-2025
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
 
       - id: toolchain
         shell: bash
@@ -48,7 +49,9 @@ jobs:
 
       - name: Install cross (Linux aarch64)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: cargo install cross --locked
+        uses: taiki-e/install-action@735e5933943122c5ac182670a935f54a949265c1 # v2.52.4
+        with:
+          tool: cross
 
       - name: Build (cross)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -58,16 +61,18 @@ jobs:
         if: matrix.target != 'aarch64-unknown-linux-gnu'
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Upload binary by Linux/Darwin
-        if: matrix.target != 'x86_64-pc-windows-msvc'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: dprint-plugin-golangci-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/dprint-plugin-golangci
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: zip -j dprint-plugin-golangci-${{ matrix.target }}.zip target/${{ matrix.target }}/release/dprint-plugin-golangci
 
-      - name: Upload binary by Windows
-        if: matrix.target == 'x86_64-pc-windows-msvc'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path target/${{ matrix.target }}/release/dprint-plugin-golangci.exe -DestinationPath dprint-plugin-golangci-${{ matrix.target }}.zip
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dprint-plugin-golangci-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/dprint-plugin-golangci.exe
+          path: dprint-plugin-golangci-${{ matrix.target }}.zip
+          if-no-files-found: error

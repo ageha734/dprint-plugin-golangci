@@ -2,11 +2,11 @@
  * Determine the next version based on Conventional Commits since the last tag.
  *
  * Usage:
- *   deno run --allow-run determine-version.ts
+ *   deno run --allow-run --allow-env --allow-write determine-version.ts
  *
- * Output (JSON to stdout):
- *   { "skip": true } if no releasable commits
- *   { "skip": false, "version": "0.2.0-alpha.20260603", "tag": "v0.2.0-alpha.20260603", "bump": "minor" }
+ * Writes to $GITHUB_OUTPUT:
+ *   skip=true                          (if no releasable commits)
+ *   skip=false / version=X / tag=vX    (otherwise)
  */
 
 type Bump = "major" | "minor" | "patch" | "none";
@@ -23,7 +23,8 @@ async function run(cmd: string[]): Promise<string> {
 
 async function getLatestTag(): Promise<string | null> {
   try {
-    return await run(["git", "describe", "--tags", "--abbrev=0"]);
+    const result = await run(["git", "describe", "--tags", "--abbrev=0"]);
+    return result || null;
   } catch {
     return null;
   }
@@ -38,7 +39,8 @@ function determineBump(messages: string[]): Bump {
   let bump: Bump = "none";
 
   for (const msg of messages) {
-    if (/^[a-z]+!:/.test(msg) || /BREAKING CHANGE/i.test(msg)) {
+    // Breaking change: type(scope)!: or type!: or BREAKING CHANGE in subject
+    if (/^[a-z]+(\(.+\))?!:/.test(msg) || /BREAKING CHANGE/i.test(msg)) {
       return "major";
     }
     if (/^feat(\(.+\))?:/.test(msg) && bump !== "major") {
@@ -95,7 +97,8 @@ async function main() {
 
   const nextVersion = bumpVersion(currentVersion, bump);
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const preVersion = `${nextVersion}-alpha.${date}`;
+  const runNumber = Deno.env.get("GITHUB_RUN_NUMBER") || "0";
+  const preVersion = `${nextVersion}-alpha.${date}.${runNumber}`;
   const tag = `v${preVersion}`;
 
   console.log(`Next version: ${preVersion} (bump: ${bump})`);
