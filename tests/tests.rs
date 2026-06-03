@@ -43,8 +43,8 @@ fn configuration_resolve_with_config_path() {
 }
 
 #[test]
-fn build_args_v1() {
-    let args = golangci::build_args(Version::V1, true, Some(".golangci.yml"), "main.go");
+fn build_run_args_v1_fix() {
+    let args = golangci::build_run_args(Version::V1, true, Some(".golangci.yml"), "main.go");
     assert_eq!(
         args,
         vec![
@@ -58,13 +58,12 @@ fn build_args_v1() {
 }
 
 #[test]
-fn build_args_v2() {
-    let args = golangci::build_args(Version::V2, true, Some(".golangci.yml"), "main.go");
+fn build_run_args_v2_no_fix_in_run() {
+    let args = golangci::build_run_args(Version::V2, true, Some(".golangci.yml"), "main.go");
     assert_eq!(
         args,
         vec![
             "run",
-            "--fix",
             "--config=.golangci.yml",
             "--output.json.path",
             "stdout",
@@ -74,12 +73,18 @@ fn build_args_v2() {
 }
 
 #[test]
-fn build_args_no_fix() {
-    let args = golangci::build_args(Version::V2, false, None, "src/lib.go");
+fn build_run_args_no_fix() {
+    let args = golangci::build_run_args(Version::V2, false, None, "src/lib.go");
     assert_eq!(
         args,
         vec!["run", "--output.json.path", "stdout", "src/lib.go"]
     );
+}
+
+#[test]
+fn build_fmt_args() {
+    let args = golangci::build_fmt_args(Some(".golangci.yml"), "main.go");
+    assert_eq!(args, vec!["fmt", "--config=.golangci.yml", "main.go"]);
 }
 
 #[test]

@@ -66,7 +66,7 @@ pub enum Version {
     V2,
 }
 
-pub fn build_args(
+pub fn build_run_args(
     version: Version,
     fix: bool,
     config_path: Option<&str>,
@@ -74,7 +74,7 @@ pub fn build_args(
 ) -> Vec<String> {
     let mut args = vec!["run".to_string()];
 
-    if fix {
+    if fix && version == Version::V1 {
         args.push("--fix".to_string());
     }
 
@@ -94,6 +94,17 @@ pub fn build_args(
     args
 }
 
+pub fn build_fmt_args(config_path: Option<&str>, file_path: &str) -> Vec<String> {
+    let mut args = vec!["fmt".to_string()];
+
+    if let Some(path) = config_path {
+        args.push(format!("--config={}", path));
+    }
+
+    args.push(file_path.to_string());
+    args
+}
+
 pub fn parse_output(stdout: &str) -> Option<Vec<LintIssue>> {
     let json_str = stdout.lines().next().unwrap_or(stdout);
     let output: LintOutput = serde_json::from_str(json_str).ok()?;
@@ -105,23 +116,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn build_args_v1_default() {
-        let args = build_args(Version::V1, true, None, "main.go");
+    fn build_run_args_v1_fix() {
+        let args = build_run_args(Version::V1, true, None, "main.go");
         assert_eq!(args, vec!["run", "--fix", "--out-format=json", "main.go"]);
     }
 
     #[test]
-    fn build_args_v2_default() {
-        let args = build_args(Version::V2, true, None, "main.go");
-        assert_eq!(
-            args,
-            vec!["run", "--fix", "--output.json.path", "stdout", "main.go"]
-        );
+    fn build_run_args_v2_no_fix_flag() {
+        let args = build_run_args(Version::V2, true, None, "main.go");
+        assert_eq!(args, vec!["run", "--output.json.path", "stdout", "main.go"]);
     }
 
     #[test]
-    fn build_args_with_config() {
-        let args = build_args(Version::V2, false, Some(".golangci.yml"), "pkg/foo.go");
+    fn build_run_args_with_config() {
+        let args = build_run_args(Version::V2, false, Some(".golangci.yml"), "pkg/foo.go");
         assert_eq!(
             args,
             vec![
@@ -132,6 +140,18 @@ mod tests {
                 "pkg/foo.go"
             ]
         );
+    }
+
+    #[test]
+    fn build_fmt_args_default() {
+        let args = build_fmt_args(None, "main.go");
+        assert_eq!(args, vec!["fmt", "main.go"]);
+    }
+
+    #[test]
+    fn build_fmt_args_with_config() {
+        let args = build_fmt_args(Some(".golangci.yml"), "main.go");
+        assert_eq!(args, vec!["fmt", "--config=.golangci.yml", "main.go"]);
     }
 
     #[test]
