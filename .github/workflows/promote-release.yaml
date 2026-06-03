@@ -58,7 +58,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PRE_TAG: ${{ inputs.tag }}
-        run: gh release download "$PRE_TAG" -D release-assets
+        run: gh release download "$PRE_TAG" -D release-assets -R ${{ github.repository }}
 
       - name: Create stable release
         env:
@@ -71,9 +71,10 @@ jobs:
           --notes "Promoted from ${PRE_TAG}"
           --latest
           release-assets/*
+          -R ${{ github.repository }}
 
       - name: Demote pre-release to None
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PRE_TAG: ${{ inputs.tag }}
-        run: gh release edit "$PRE_TAG" --prerelease=false --latest=false
+        run: gh release edit "$PRE_TAG" --prerelease=false --latest=false -R ${{ github.repository }}
