@@ -9,26 +9,15 @@ permissions:
   contents: read
 
 jobs:
-  guard:
-    uses: ./.github/workflows/_reusable-pr-guard.yaml
   rustfmt:
-    needs:
-      - guard
     uses: ./.github/workflows/_reusable-rustfmt.yaml
   clippy:
-    needs:
-      - guard
     uses: ./.github/workflows/_reusable-clippy.yaml
   test:
-    needs:
-      - guard
     uses: ./.github/workflows/_reusable-cargo-test.yaml
   build:
-    needs:
-      - guard
     uses: ./.github/workflows/_reusable-cargo-build.yaml
   e2e:
     needs:
-      - guard
       - build
     uses: ./.github/workflows/_reusable-e2e.yaml
