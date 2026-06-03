@@ -79,19 +79,29 @@ pub async fn format_bytes(
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| file_path.to_string_lossy().to_string());
-    let args = golangci::build_args(
-        version,
-        config.fix,
-        config.config_path.as_deref(),
-        &file_name,
-    );
 
     let work_dir = file_path
         .parent()
         .unwrap_or_else(|| std::path::Path::new("."));
 
+    if config.fix && version == golangci::Version::V2 {
+        let fmt_args = golangci::build_fmt_args(config.config_path.as_deref(), &file_name);
+        Command::new(&binary_path)
+            .args(&fmt_args)
+            .current_dir(work_dir)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .output()
+            .await
+            .ok();
+    }
+
+    let run_args =
+        golangci::build_run_args(version, config.fix, config.config_path.as_deref(), &file_name);
+
     let child = Command::new(&binary_path)
-        .args(&args)
+        .args(&run_args)
         .current_dir(work_dir)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())

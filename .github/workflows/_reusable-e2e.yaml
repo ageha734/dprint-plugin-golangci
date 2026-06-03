@@ -39,7 +39,11 @@ jobs:
             mode: auto-install
             scenario: lint-error
 
-          # fix: auto-fix gofmt violations (v1 only, v2 fix behavior TBD)
+          # fix: auto-fix gofmt violations
+          - golangci: "2.5.0"
+            go: "1.24"
+            mode: installed
+            scenario: fix
           - golangci: "1.64.8"
             go: "1.24"
             mode: installed
