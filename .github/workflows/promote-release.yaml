@@ -30,6 +30,28 @@ jobs:
           echo "stable_tag=v${STABLE_VERSION}" >> "$GITHUB_OUTPUT"
           echo "Promoting ${PRE_TAG} -> v${STABLE_VERSION}"
 
+      - name: Create stable tag
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PRE_TAG: ${{ inputs.tag }}
+          STABLE_TAG: ${{ steps.version.outputs.stable_tag }}
+        with:
+          script: |
+            const preTag = process.env.PRE_TAG;
+            const stableTag = process.env.STABLE_TAG;
+            const { data: ref } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `tags/${preTag}`,
+            });
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${stableTag}`,
+              sha: ref.object.sha,
+            });
+            console.log(`Created tag ${stableTag} at ${ref.object.sha}`);
+
       - run: mkdir -p release-assets
 
       - name: Download pre-release assets
