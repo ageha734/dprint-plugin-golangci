@@ -102,25 +102,28 @@ pub async fn format_bytes(
     let output = child.wait_with_output().await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
+    let issues = golangci::parse_output(&stdout);
 
-    if let Some(issues) = golangci::parse_output(&stdout) {
-        let formatted = golangci::format_issues(&issues);
-        return Err(anyhow!("{}", formatted));
-    }
-
-    if output.status.success() {
-        if config.fix {
-            let fixed_content = tokio::fs::read_to_string(file_path).await?;
-            if fixed_content == file_text {
-                return Ok(None);
-            }
+    if config.fix {
+        let fixed_content = tokio::fs::read_to_string(file_path).await?;
+        if fixed_content != file_text {
             tokio::fs::write(file_path, file_text.as_bytes()).await?;
             return Ok(Some(fixed_content.into_bytes()));
+        }
+
+        if let Some(issues) = issues {
+            let formatted = golangci::format_issues(&issues);
+            return Err(anyhow!("{}", formatted));
         }
         return Ok(None);
     }
 
-    if !stderr.trim().is_empty() {
+    if let Some(issues) = issues {
+        let formatted = golangci::format_issues(&issues);
+        return Err(anyhow!("{}", formatted));
+    }
+
+    if !output.status.success() && !stderr.trim().is_empty() {
         return Err(anyhow!("golangci-lint error:\n{}", stderr));
     }
 
