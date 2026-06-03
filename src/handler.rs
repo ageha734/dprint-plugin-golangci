@@ -97,8 +97,12 @@ pub async fn format_bytes(
             .ok();
     }
 
-    let run_args =
-        golangci::build_run_args(version, config.fix, config.config_path.as_deref(), &file_name);
+    let run_args = golangci::build_run_args(
+        version,
+        config.fix,
+        config.config_path.as_deref(),
+        &file_name,
+    );
 
     let child = Command::new(&binary_path)
         .args(&run_args)

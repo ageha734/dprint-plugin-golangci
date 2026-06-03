@@ -124,10 +124,7 @@ mod tests {
     #[test]
     fn build_run_args_v2_no_fix_flag() {
         let args = build_run_args(Version::V2, true, None, "main.go");
-        assert_eq!(
-            args,
-            vec!["run", "--output.json.path", "stdout", "main.go"]
-        );
+        assert_eq!(args, vec!["run", "--output.json.path", "stdout", "main.go"]);
     }
 
     #[test]
