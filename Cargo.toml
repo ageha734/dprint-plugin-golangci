@@ -1,6 +1,6 @@
 [package]
 name = "dprint-plugin-golangci"
-version = "1.2.0-alpha.20260603.7"
+version = "1.2.0-alpha.20260603.8"
 authors = ["ageha734"]
 edition = "2024"
 keywords = ["formatting", "formatter", "golangci-lint", "dprint", "go"]
