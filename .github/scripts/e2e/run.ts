@@ -77,13 +77,28 @@ async function detectGolangciVersion(): Promise<string | null> {
   }
 }
 
-function golangciConfig(version: string, linters: string[]): string {
+function golangciConfig(
+  version: string,
+  opts: { linters?: string[]; formatters?: string[] },
+): string {
   const major = version.split(".")[0];
-  const linterList = linters.map((l) => `    - ${l}`).join("\n");
-  if (major === "2") {
-    return `version: "2"\nlinters:\n  enable:\n${linterList}\n`;
+  let config = major === "2" ? `version: "2"\n` : "";
+
+  if (opts.linters && opts.linters.length > 0) {
+    const list = opts.linters.map((l) => `    - ${l}`).join("\n");
+    config += `linters:\n  enable:\n${list}\n`;
   }
-  return `linters:\n  enable:\n${linterList}\n`;
+
+  if (opts.formatters && opts.formatters.length > 0) {
+    const list = opts.formatters.map((f) => `    - ${f}`).join("\n");
+    if (major === "2") {
+      config += `formatters:\n  enable:\n${list}\n`;
+    } else {
+      config += `linters:\n  enable:\n${list}\n`;
+    }
+  }
+
+  return config;
 }
 
 function setupTestProject(
@@ -104,7 +119,7 @@ function setupTestProject(
       );
       Deno.writeTextFileSync(
         `${dir}/.golangci.yml`,
-        golangciConfig(golangciVersion, ["unused"]),
+        golangciConfig(golangciVersion, { linters: ["unused"] }),
       );
       break;
 
@@ -116,7 +131,7 @@ function setupTestProject(
       );
       Deno.writeTextFileSync(
         `${dir}/.golangci.yml`,
-        golangciConfig(golangciVersion, ["gofmt"]),
+        golangciConfig(golangciVersion, { formatters: ["gofmt"] }),
       );
       break;
 
@@ -127,7 +142,7 @@ function setupTestProject(
       );
       Deno.writeTextFileSync(
         `${dir}/.golangci.yml`,
-        golangciConfig(golangciVersion, ["unused"]),
+        golangciConfig(golangciVersion, { linters: ["unused"] }),
       );
       break;
 
@@ -139,7 +154,7 @@ function setupTestProject(
       Deno.mkdirSync(`${dir}/config`, { recursive: true });
       Deno.writeTextFileSync(
         `${dir}/config/lint.yml`,
-        golangciConfig(golangciVersion, ["unused"]),
+        golangciConfig(golangciVersion, { linters: ["unused"] }),
       );
       break;
   }
